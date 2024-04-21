@@ -18,7 +18,7 @@ interface Env {
 	DB: D1Database;
 }
 
-const squids = new Sqids({ alphabet: 'abcdefghijklmnopqrstuvwxyz0123456789' });
+const squids = new Sqids({ alphabet: 'abcdefghijklmnopqrstuvwxyz0123456789', minLength: 4 });
 
 async function createDbEntry(env: Env, url: string) {
 	const res = await env.DB.prepare('insert into Links (url) values (?)').bind(url).run();
@@ -32,6 +32,12 @@ async function getOriginalUrl(env: Env, pathname: string) {
 	return res?.url;
 }
 
+async function createShortUrl(env: Env, url: string) {
+	const id = await createDbEntry(env, url);
+	const shortUrl = squids.encode([id]);
+	return new Response(`Short url created /${shortUrl}`);
+}
+
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		// This is the url that is requested
@@ -39,27 +45,24 @@ export default {
 		const pathname = incomingUrl.pathname;
 		const params = incomingUrl.searchParams;
 
-		if (pathname === '/') return new Response('url shortner');
+		switch (pathname) {
+			case '/':
+				return new Response('url shortner');
+			case '/favicon.ico':
+				return new Response(null, { status: 404 });
+			case '/create':
+				if (params.get('key') !== env.SECRET_KEY) return new Response('No key provided');
 
-		if (pathname === '/favicon.ico') return new Response(null, { status: 404 });
+				const url = params.get('url');
 
-		const createKey = params.get('key');
-		if (pathname === '/create') {
-			if (createKey !== env.SECRET_KEY) return new Response('No key provided');
-			const url = params.get('url');
-			if (url) {
-				const id = await createDbEntry(env, url);
-				const shortUrl = squids.encode([id]);
-				return new Response(`Short url created /${shortUrl}`);
-			}
+				if (url) return await createShortUrl(env, url);
+				return new Response('No url provided');
+			default:
+				const redirectUrl = await getOriginalUrl(env, pathname);
+				if (redirectUrl) {
+					return Response.redirect(redirectUrl, 302);
+				}
+				return new Response('Not found', { status: 404 });
 		}
-
-		const redirectUrl = await getOriginalUrl(env, pathname);
-
-		if (redirectUrl) {
-			return Response.redirect(redirectUrl, 302);
-		}
-
-		return new Response(`<html><p>There is no url defined for the following ${pathname}</p></html>`);
 	},
 };
