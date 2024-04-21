@@ -62,8 +62,14 @@ compatibility_flags = ["nodejs_compat"]
 # Bind a KV Namespace. Use KV as persistent storage for small key-value pairs.
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#kv-namespaces
 # [[kv_namespaces]]
-# binding = "MY_KV_NAMESPACE"
-# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# binding = "short_urls"
+# id = "5a612cdaeeea418a8b57eaba9eef9fc6"
+# preview_id = "fa3130ce841142dcbe4063a6f164dc78"
+
+[[d1_databases]]
+binding = "DB" # i.e. available in your Worker on env.DB
+database_name = "prod-url-shortner"
+database_id = "b0a8f6b9-d8ce-44f2-8df5-1f06bfd9ca8d"
 
 # Bind an mTLS certificate. Use to present a client certificate when communicating with another service.
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#mtls-certificates
