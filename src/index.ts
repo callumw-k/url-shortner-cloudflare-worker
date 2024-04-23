@@ -35,7 +35,7 @@ async function getOriginalUrl(env: Env, pathname: string) {
 async function createShortUrl(env: Env, url: string) {
 	const id = await createDbEntry(env, url);
 	const shortUrl = squids.encode([id]);
-	return new Response(`Short url created /${shortUrl}`);
+	return new Response(JSON.stringify({ url, shortUrl }), { headers: { 'Content-Type': 'application/json' } });
 }
 
 export default {
@@ -43,18 +43,22 @@ export default {
 		// This is the url that is requested
 		const incomingUrl = new URL(request.url);
 		const pathname = incomingUrl.pathname;
-		const params = incomingUrl.searchParams;
 
 		switch (pathname) {
 			case '/':
-				return new Response('url shortner');
+				return new Response('Url shortner');
 			case '/favicon.ico':
 				return new Response(null, { status: 404 });
-			case '/create':
-				if (params.get('key') !== env.SECRET_KEY) return new Response('No key provided');
+			case '/api/shorten':
+				const bearer = request.headers.get('Authorization');
 
-				const url = params.get('url');
+				if (!bearer || bearer !== `Bearer ${env.SECRET_KEY}`) {
+					return new Response('Unauthorized', { status: 401 });
+				}
+				if (request.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
+				const body = await request.json<{ url: string }>();
+				const url = body?.url;
 				if (url) return await createShortUrl(env, url);
 				return new Response('No url provided');
 			default:
