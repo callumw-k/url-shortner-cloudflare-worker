@@ -32,9 +32,14 @@ async function getOriginalUrl(env: Env, pathname: string) {
 	return res?.url;
 }
 
+async function updateDbEntryShortUrl(env: Env, id: number, short: string) {
+	await env.DB.prepare('update Links set short = ? where id = ?').bind(short, id).run();
+}
+
 async function createShortUrl(env: Env, url: string) {
 	const id = await createDbEntry(env, url);
 	const shortUrl = squids.encode([id]);
+	await updateDbEntryShortUrl(env, id, shortUrl);
 	return new Response(JSON.stringify({ url, shortUrl }), { headers: { 'Content-Type': 'application/json' } });
 }
 
@@ -61,6 +66,7 @@ export default {
 				const url = body?.url;
 				if (url) return await createShortUrl(env, url);
 				return new Response('No url provided');
+
 			default:
 				const redirectUrl = await getOriginalUrl(env, pathname);
 				if (redirectUrl) {
